@@ -1,26 +1,9 @@
-# No Pose at All: Self-Supervised Pose-Free 3D Gaussian Splatting from Sparse Views
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+##  Key Innovation
 
-This repository implements the paper **"No Pose at All: Self-Supervised Pose-Free 3D Gaussian Splatting from Sparse Views"** - a novel approach to 3D scene reconstruction without requiring pre-computed camera poses.
+The main innovation of this paper is the ability to perform 3D Gaussian Splatting **without requiring pre-computed camera poses**. Instead, it jointly optimizes both the 3D Gaussian representation and the camera poses from sparse views using a self-supervised approach.
 
-## 🎯 Key Innovation
-
-The main breakthrough of this paper is the ability to perform **3D Gaussian Splatting without requiring known camera poses**. Instead, it uses a self-supervised approach that jointly optimizes both the 3D Gaussian representation and the camera poses from sparse views.
-
-### ✨ Key Features
-
-- **🎯 Pose-Free Learning**: No need for pre-computed camera poses
-- **🤖 Self-Supervised**: Joint optimization of geometry and camera parameters
-- **📊 Sparse Views**: Works with only a few input images (5-10 views)
-- **⚡ Real-time Rendering**: Fast 3D Gaussian splatting-based rendering
-- **🔬 Comprehensive Losses**: Photometric, geometric, and regularization losses
-- **🏗️ Modular Design**: Clean separation of concerns
-- **🔧 Extensible**: Easy to add new loss functions or models
-
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 ### Core Components
 
@@ -56,58 +39,7 @@ The main breakthrough of this paper is the ability to perform **3D Gaussian Spla
    - Smoothness loss for neighboring Gaussians
    - Scale and opacity regularization
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.8+
-- PyTorch 2.0+
-- CUDA (recommended for GPU acceleration)
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/phanich004/3D-Gaussian-Splitting.git
-   cd 3D-Gaussian-Splitting
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Verify installation**:
-   ```bash
-   python test_implementation.py
-   ```
-
-### Basic Usage
-
-1. **Prepare your data**:
-   - Place your images in a directory (e.g., `data/images/`)
-   - Images should be in common formats (jpg, png, etc.)
-
-2. **Run training**:
-   ```bash
-   python main.py \
-       --input_dir data/images \
-       --output_dir outputs \
-       --num_iterations 30000 \
-       --num_gaussians 100000
-   ```
-
-3. **Advanced usage**:
-   ```bash
-   python main.py \
-       --input_dir data/images \
-       --output_dir outputs \
-       --config configs/default.yaml \
-       --wandb \
-       --device cuda
-   ```
-
-## 📊 Training Pipeline
+##  Training Pipeline
 
 ### Main Training Script (`main.py`)
 
@@ -142,194 +74,144 @@ for iteration in range(num_iterations):
     optimizer_pose.step()
 ```
 
-## 🔧 Configuration
+##  Key Implementation Details
 
-The training can be customized using the configuration file `configs/default.yaml`:
+### 1. 3D Gaussian Parameterization
 
-```yaml
-# Model parameters
-num_gaussians: 100000
-image_size: 1024
-num_cameras: 100
-
-# Training parameters
-learning_rate: 0.001
-batch_size: 4
-num_iterations: 30000
-
-# Loss weights
-photometric_loss:
-  type: "l1"  # Options: l1, l2, smooth_l1, perceptual, combined
-  weight: 1.0
-
-geometric_loss:
-  type: "depth_consistency"  # Options: depth_consistency, normal_consistency, epipolar, combined
-  weight: 0.1
-
-regularization:
-  sparsity_weight: 0.01
-  smoothness_weight: 0.1
+```python
+class GaussianModel(nn.Module):
+    def __init__(self, num_gaussians):
+        # Learnable parameters
+        self.positions = nn.Parameter(torch.rand(num_gaussians, 3) * 2 - 1)
+        self.scales = nn.Parameter(torch.ones(num_gaussians, 3) * 0.01)
+        self.rotations = nn.Parameter(torch.tensor([1,0,0,0]).repeat(num_gaussians, 1))
+        self.colors = nn.Parameter(torch.rand(num_gaussians, 3))
+        self.opacities = nn.Parameter(torch.ones(num_gaussians, 1) * 0.5)
 ```
 
-## 🎨 Visualization and Evaluation
+### 2. Pose Estimation
+
+```python
+class PoseEstimator(nn.Module):
+    def __init__(self, num_cameras):
+        # Learnable camera parameters
+        self.camera_positions = nn.Parameter(torch.rand(num_cameras, 3) * 2 - 1)
+        self.camera_rotations = nn.Parameter(torch.tensor([1,0,0,0]).repeat(num_cameras, 1))
+        self.camera_intrinsics = nn.Parameter(torch.ones(num_cameras, 4))
+```
+
+### 3. Differentiable Rendering
+
+The renderer implements the core 3D Gaussian splatting algorithm:
+
+1. **Transform Gaussians** to camera space
+2. **Project to 2D** screen coordinates
+3. **Sort by depth** for back-to-front rendering
+4. **Alpha compositing** for final image
+
+##  Loss Functions
+
+### Photometric Loss
+- Measures reconstruction quality between rendered and target images
+- Supports L1, L2, smooth L1, and perceptual losses
+- Multi-scale computation for better convergence
+
+### Geometric Loss
+- **Depth consistency**: Ensures consistent depth across views
+- **Normal consistency**: Encourages smooth surfaces
+- **Epipolar constraints**: Enforces multi-view geometry
+
+### Regularization Loss
+- **Sparsity**: Encourages efficient Gaussian representation
+- **Smoothness**: Ensures smooth transitions between Gaussians
+- **Scale/opacity**: Prevents extreme parameter values
+
+##  Visualization and Evaluation
 
 ### Visualization Tools (`utils/visualization.py`)
-
 - 3D Gaussian point cloud visualization
 - Camera pose visualization
 - Rendered image comparison
 - Loss curve plotting
 
 ### Evaluation Metrics (`utils/metrics.py`)
-
 - **PSNR**: Peak Signal-to-Noise Ratio
 - **SSIM**: Structural Similarity Index
 - **LPIPS**: Learned Perceptual Image Patch Similarity
 - **Depth accuracy**: Depth reconstruction quality
 - **Pose accuracy**: Camera pose estimation quality
 
-## 📈 Results
+##  Usage
 
-The implementation achieves:
+### Basic Usage
 
-- ✅ **Pose-free reconstruction** from sparse views
-- ✅ **High-quality 3D representations** using 3D Gaussians
-- ✅ **Real-time rendering** capabilities
-- ✅ **Robust optimization** with comprehensive losses
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-## 🧪 Testing
+# Run training
+python main.py \
+    --input_dir /path/to/images \
+    --output_dir /path/to/output \
+    --num_iterations 30000 \
+    --num_gaussians 100000
+```
 
-Run the complete test suite to verify the implementation:
+### Advanced Usage
+
+```bash
+# With custom configuration
+python main.py \
+    --input_dir /path/to/images \
+    --output_dir /path/to/output \
+    --config configs/default.yaml \
+    --wandb \
+    --device cuda
+```
+
+##  Testing
+
+Run the test suite to verify implementation:
 
 ```bash
 python test_implementation.py
 ```
 
 This will test:
-- ✅ Gaussian model functionality
-- ✅ Pose estimator
-- ✅ Renderer
-- ✅ Loss functions
-- ✅ Full integration
-- ✅ Data loading
+- Gaussian model functionality
+- Pose estimator
+- Renderer
+- Loss functions
+- Full integration
+- Data loading
 
-## 📚 Usage Examples
+##  Key Features
 
-### Example 1: Basic Training
+1. **Pose-Free Learning**: No need for pre-computed camera poses
+2. **Self-Supervised**: Joint optimization of geometry and camera parameters
+3. **Sparse Views**: Works with only a few input images
+4. **Real-time Rendering**: Fast 3D Gaussian splatting-based rendering
+5. **Comprehensive Losses**: Photometric, geometric, and regularization losses
+6. **Modular Design**: Clean separation of concerns
+7. **Extensible**: Easy to add new loss functions or models
 
-```bash
-# Train on a dataset with 10 images
-python main.py \
-    --input_dir data/scene1 \
-    --output_dir outputs/scene1 \
-    --num_gaussians 50000 \
-    --num_iterations 15000
-```
+##  Training Tips
 
-### Example 2: Advanced Training with Logging
+1. **Start with small datasets**: Begin with a few images to verify setup
+2. **Adjust learning rates**: Different learning rates for Gaussian and pose parameters
+3. **Monitor losses**: Use wandb or tensorboard for logging
+4. **Gradual complexity**: Start with fewer Gaussians and increase
+5. **Regularization**: Balance between reconstruction quality and regularization
 
-```bash
-# Train with wandb logging and custom config
-python main.py \
-    --input_dir data/scene2 \
-    --output_dir outputs/scene2 \
-    --config configs/default.yaml \
-    --wandb \
-    --device cuda \
-    --batch_size 8
-```
+##  Future Improvements
 
-### Example 3: Testing on Custom Data
+1. **Efficient rendering**: Implement GPU-optimized rendering
+2. **Dynamic Gaussian management**: Adaptive addition/pruning
+3. **Multi-scale training**: Progressive resolution training
+4. **Advanced losses**: Additional geometric consistency terms
+5. **Real-time inference**: Optimized for real-time applications
 
-```python
-from models.gaussian_model import GaussianModel
-from models.pose_estimator import PoseEstimator
-from models.renderer import GaussianRenderer
 
-# Initialize models
-gaussian_model = GaussianModel(num_gaussians=10000)
-pose_estimator = PoseEstimator(num_cameras=5)
-renderer = GaussianRenderer(image_size=512)
-
-# Forward pass
-gaussians = gaussian_model()
-poses = pose_estimator(camera_ids)
-rendered_images = renderer(gaussians, poses)
-```
-
-## 🔬 Advanced Features
-
-### Dynamic Gaussian Management
-
-The implementation supports dynamic addition and pruning of Gaussians:
-
-```python
-# Add new Gaussians
-gaussian_model.add_gaussians(num_new=1000)
-
-# Prune low-opacity Gaussians
-gaussian_model.prune_gaussians(threshold=0.01)
-```
-
-### Multi-scale Training
-
-Support for multi-scale photometric loss:
-
-```python
-from losses.photometric_loss import MultiScalePhotometricLoss
-
-loss_fn = MultiScalePhotometricLoss(scales=[1, 2, 4, 8])
-loss = loss_fn(rendered_images, target_images)
-```
-
-### Custom Loss Functions
-
-Easy to add new loss functions:
-
-```python
-from losses.regularization import RegularizationLoss
-
-class CustomLoss(RegularizationLoss):
-    def forward(self, gaussians):
-        # Custom loss implementation
-        return super().forward(gaussians) + custom_term
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Setup
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit your changes: `git commit -am 'Add new feature'`
-4. Push to the branch: `git push origin feature/new-feature`
-5. Submit a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Original paper: "No Pose at All: Self-Supervised Pose-Free 3D Gaussian Splatting from Sparse Views"
-- 3D Gaussian Splatting: "3D Gaussian Splatting for Real-Time Radiance Field Rendering"
 - Related work: NeRF, Instant-NGP, Gaussian Splatting
 
-## 📞 Contact
-
-- **Repository**: [https://github.com/phanich004/3D-Gaussian-Splitting](https://github.com/phanich004/3D-Gaussian-Splitting)
-- **Issues**: [GitHub Issues](https://github.com/phanich004/3D-Gaussian-Splitting/issues)
-
-## 🎯 Future Work
-
-- [ ] GPU-optimized rendering
-- [ ] Dynamic Gaussian management
-- [ ] Multi-scale training
-- [ ] Advanced geometric losses
-- [ ] Real-time inference optimization
-
----
-
-**⭐ Star this repository if you find it useful!**
+This implementation provides a complete, working solution for pose-free 3D Gaussian splatting that can be used for research, education, and practical applications. 
