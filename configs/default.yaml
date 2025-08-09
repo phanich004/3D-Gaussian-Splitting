@@ -1,0 +1,69 @@
+# Default configuration for Pose-Free 3D Gaussian Splatting
+
+# Model parameters
+num_gaussians: 100000
+image_size: 1024
+num_cameras: 100
+
+# Training parameters
+learning_rate: 0.001
+batch_size: 4
+num_iterations: 30000
+
+# Loss weights
+photometric_loss:
+  type: "l1"  # Options: l1, l2, smooth_l1, perceptual, combined
+  weight: 1.0
+
+geometric_loss:
+  type: "depth_consistency"  # Options: depth_consistency, normal_consistency, epipolar, combined
+  weight: 0.1
+
+regularization:
+  sparsity_weight: 0.01
+  smoothness_weight: 0.1
+
+# Rendering parameters
+renderer:
+  image_size: 1024
+  near_plane: 0.1
+  far_plane: 100.0
+
+# Data loading
+data:
+  image_dir: "data/images"
+  pose_file: null  # Optional path to camera poses
+  num_workers: 4
+
+# Logging and visualization
+logging:
+  log_interval: 100
+  save_interval: 5000
+  visualization_interval: 1000
+  use_wandb: false
+
+# Output
+output:
+  save_dir: "outputs"
+  experiment_name: "pose_free_3d_gaussian"
+
+# Advanced parameters
+advanced:
+  # Gaussian initialization
+  init_positions: "random"  # Options: random, sphere, grid
+  init_scales: 0.01
+  init_opacities: 0.5
+  
+  # Optimization
+  optimizer: "adam"  # Options: adam, sgd, adamw
+  scheduler: "cosine"  # Options: cosine, step, exponential
+  
+  # Regularization
+  prune_threshold: 0.01
+  add_gaussians_interval: 5000
+  max_gaussians: 200000
+
+# Evaluation
+evaluation:
+  metrics: ["psnr", "ssim", "lpips"]
+  eval_interval: 5000 
